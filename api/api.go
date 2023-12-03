@@ -44,6 +44,16 @@ type Response struct {
 	Metadata Metadata `json:"metadata"`
 }
 
+func AuthorizeError(ctx context.Context, code int, message string, w http.ResponseWriter) (bool, *http.Request) {
+	data, err := errorBody(ctx, code, message)
+	if err != nil {
+		return false, nil
+	}
+	w.WriteHeader(code)
+	_, _ = w.Write(data)
+	return false, nil
+}
+
 func CommitTx(ctx context.Context, responseCode int) (code int, body []byte, err error) {
 	tx := ctx.Value(ctxkey.Tx).(pgx.Tx)
 	err = tx.Commit(ctx)
