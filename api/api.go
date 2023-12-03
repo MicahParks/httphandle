@@ -36,7 +36,7 @@ func NewAPIError(ctx context.Context, code int, message string) Response {
 }
 
 type Metadata struct {
-	RequestUUID uuid.UUID `json:"requestMetadata"`
+	RequestUUID uuid.UUID `json:"requestUUID"`
 }
 
 type Response struct {
