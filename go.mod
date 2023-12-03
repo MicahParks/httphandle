@@ -3,7 +3,7 @@ module github.com/MicahParks/httphandle
 go 1.21.3
 
 require (
-	github.com/MicahParks/jsontype v0.5.0
+	github.com/MicahParks/jsontype v0.6.1
 	github.com/MicahParks/templater v0.0.2
 	github.com/google/uuid v1.4.0
 	github.com/jackc/pgx/v5 v5.5.0

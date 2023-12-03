@@ -26,7 +26,7 @@ type SetupArgs struct {
 }
 
 // SetupResults are the results of setting up the application.
-type SetupResults[C jt.Config[C]] struct {
+type SetupResults[C jt.Defaulter[C]] struct {
 	Conf      C
 	Files     http.FileSystem
 	Logger    *slog.Logger
@@ -34,7 +34,7 @@ type SetupResults[C jt.Config[C]] struct {
 }
 
 // Setup sets up the application.
-func Setup[C jt.Config[C]](args SetupArgs) (SetupResults[C], error) {
+func Setup[C jt.Defaulter[C]](args SetupArgs) (SetupResults[C], error) {
 	var r SetupResults[C]
 
 	conf, err := jt.Read[C]()
