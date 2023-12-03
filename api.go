@@ -44,7 +44,7 @@ type APIResponse[Data any] struct {
 	Metadata APIMetadata `json:"metadata"`
 }
 
-func APICommitTx(ctx context.Context) (code int, body []byte, err error) {
+func APICommitTx(ctx context.Context, responseCode int) (code int, body []byte, err error) {
 	tx := ctx.Value(ctxkey.Tx).(pgx.Tx)
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -54,7 +54,7 @@ func APICommitTx(ctx context.Context) (code int, body []byte, err error) {
 		)
 		return APIErrorResponse(ctx, http.StatusInternalServerError, hhconst.RespInternalServerError)
 	}
-	return APIJSONOK(ctx, APIResponse[any]{})
+	return APIJSON(ctx, responseCode, APIResponse[any]{})
 }
 
 func APIErrorResponse(ctx context.Context, code int, message string) (int, []byte, error) {
@@ -90,7 +90,7 @@ func APIJSONBody[ReqData jt.Defaulter[ReqData]](r *http.Request) (reqData ReqDat
 	return reqData, ctx, http.StatusOK, nil, nil
 }
 
-func APIJSONOK(ctx context.Context, r APIResponse[any]) (int, []byte, error) {
+func APIJSON(ctx context.Context, code int, r APIResponse[any]) (int, []byte, error) {
 	meta := APIMetadata{
 		RequestUUID: ctx.Value(ctxkey.ReqUUID).(uuid.UUID),
 	}
@@ -99,7 +99,7 @@ func APIJSONOK(ctx context.Context, r APIResponse[any]) (int, []byte, error) {
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to JSON marshal response: %w", err)
 	}
-	return http.StatusOK, data, nil
+	return code, data, nil
 }
 
 func errorBody(ctx context.Context, code int, message string) ([]byte, error) {
