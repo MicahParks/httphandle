@@ -21,7 +21,7 @@ type APIError struct {
 	Message string `json:"message"`
 }
 
-func NewAPIError(ctx context.Context, code int, message string) APIResponse[APIError] {
+func NewAPIError(ctx context.Context, code int, message string) APIResponse {
 	apiError := APIError{
 		Code:    code,
 		Message: message,
@@ -29,7 +29,7 @@ func NewAPIError(ctx context.Context, code int, message string) APIResponse[APIE
 	meta := APIMetadata{
 		RequestUUID: ctx.Value(ctxkey.ReqUUID).(uuid.UUID),
 	}
-	return APIResponse[APIError]{
+	return APIResponse{
 		Data:     apiError,
 		Metadata: meta,
 	}
@@ -39,8 +39,8 @@ type APIMetadata struct {
 	RequestUUID uuid.UUID `json:"requestMetadata"`
 }
 
-type APIResponse[Data any] struct {
-	Data     Data        `json:"data,omitempty"`
+type APIResponse struct {
+	Data     any         `json:"data,omitempty"`
 	Metadata APIMetadata `json:"metadata"`
 }
 
@@ -54,7 +54,7 @@ func APICommitTx(ctx context.Context, responseCode int) (code int, body []byte, 
 		)
 		return APIErrorResponse(ctx, http.StatusInternalServerError, hhconst.RespInternalServerError)
 	}
-	return APIJSON(ctx, responseCode, APIResponse[any]{})
+	return APIJSON(ctx, responseCode, nil)
 }
 
 func APIErrorResponse(ctx context.Context, code int, message string) (int, []byte, error) {
@@ -90,16 +90,20 @@ func APIJSONBody[ReqData jt.Defaulter[ReqData]](r *http.Request) (reqData ReqDat
 	return reqData, ctx, http.StatusOK, nil, nil
 }
 
-func APIJSON(ctx context.Context, code int, r APIResponse[any]) (int, []byte, error) {
+func APIJSON(ctx context.Context, code int, data any) (int, []byte, error) {
 	meta := APIMetadata{
 		RequestUUID: ctx.Value(ctxkey.ReqUUID).(uuid.UUID),
 	}
+	r := APIResponse{
+		Data:     data,
+		Metadata: meta,
+	}
 	r.Metadata = meta
-	data, err := json.Marshal(r)
+	b, err := json.Marshal(r)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to JSON marshal response: %w", err)
 	}
-	return code, data, nil
+	return code, b, nil
 }
 
 func errorBody(ctx context.Context, code int, message string) ([]byte, error) {
