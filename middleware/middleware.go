@@ -15,9 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	hh "github.com/MicahParks/httphandle"
 	"github.com/MicahParks/httphandle/constant"
 	"github.com/MicahParks/httphandle/middleware/ctxkey"
-	"github.com/MicahParks/httphandle/model"
 )
 
 const (
@@ -228,7 +228,7 @@ func RequestUUID(next http.Handler) http.Handler {
 
 // WriteErrorBody writes an error body to the response writer.
 func WriteErrorBody(ctx context.Context, code int, message string, writer http.ResponseWriter) {
-	data, err := json.Marshal(model.NewError(ctx, code, message))
+	data, err := json.Marshal(hh.NewAPIError(ctx, code, message))
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
