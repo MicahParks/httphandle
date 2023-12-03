@@ -1,4 +1,4 @@
-package httphandle
+package api
 
 import (
 	"context"
@@ -16,35 +16,35 @@ import (
 	"github.com/MicahParks/httphandle/middleware/ctxkey"
 )
 
-type APIError struct {
+type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-func NewAPIError(ctx context.Context, code int, message string) APIResponse {
-	apiError := APIError{
+func NewAPIError(ctx context.Context, code int, message string) Response {
+	apiError := Error{
 		Code:    code,
 		Message: message,
 	}
-	meta := APIMetadata{
+	meta := Metadata{
 		RequestUUID: ctx.Value(ctxkey.ReqUUID).(uuid.UUID),
 	}
-	return APIResponse{
+	return Response{
 		Data:     apiError,
 		Metadata: meta,
 	}
 }
 
-type APIMetadata struct {
+type Metadata struct {
 	RequestUUID uuid.UUID `json:"requestMetadata"`
 }
 
-type APIResponse struct {
-	Data     any         `json:"data,omitempty"`
-	Metadata APIMetadata `json:"metadata"`
+type Response struct {
+	Data     any      `json:"data,omitempty"`
+	Metadata Metadata `json:"metadata"`
 }
 
-func APICommitTx(ctx context.Context, responseCode int) (code int, body []byte, err error) {
+func CommitTx(ctx context.Context, responseCode int) (code int, body []byte, err error) {
 	tx := ctx.Value(ctxkey.Tx).(pgx.Tx)
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -52,12 +52,12 @@ func APICommitTx(ctx context.Context, responseCode int) (code int, body []byte, 
 		l.ErrorContext(ctx, "Failed to commit transaction.",
 			hhconst.LogErr, err,
 		)
-		return APIErrorResponse(ctx, http.StatusInternalServerError, hhconst.RespInternalServerError)
+		return ErrorResponse(ctx, http.StatusInternalServerError, hhconst.RespInternalServerError)
 	}
-	return APIJSON(ctx, responseCode, nil)
+	return RespondJSON(ctx, responseCode, nil)
 }
 
-func APIErrorResponse(ctx context.Context, code int, message string) (int, []byte, error) {
+func ErrorResponse(ctx context.Context, code int, message string) (int, []byte, error) {
 	data, err := errorBody(ctx, code, message)
 	if err != nil {
 		return 0, nil, err
@@ -65,36 +65,38 @@ func APIErrorResponse(ctx context.Context, code int, message string) (int, []byt
 	return code, data, nil
 }
 
-func APIJSONBody[ReqData jt.Defaulter[ReqData]](r *http.Request) (reqData ReqData, ctx context.Context, code int, body []byte, err error) {
+func ExtractJSON[ReqData jt.Defaulter[ReqData]](r *http.Request) (reqData ReqData, l *slog.Logger, ctx context.Context, code int, body []byte, err error) {
 	//goland:noinspection GoUnhandledErrorResult
 	defer r.Body.Close()
 
+	l = r.Context().Value(ctxkey.Logger).(*slog.Logger)
+
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
-		code, body, _ = APIErrorResponse(ctx, http.StatusBadRequest, "Failed to read request body.")
-		return reqData, ctx, code, body, err
+		code, body, _ = ErrorResponse(ctx, http.StatusBadRequest, "Failed to read request body.")
+		return reqData, l, ctx, code, body, err
 	}
 
 	err = json.Unmarshal(b, &reqData)
 	if err != nil {
-		code, body, _ = APIErrorResponse(ctx, http.StatusUnsupportedMediaType, "Failed to JSON parse request body.")
-		return reqData, ctx, code, body, err
+		code, body, _ = ErrorResponse(ctx, http.StatusUnsupportedMediaType, "Failed to JSON parse request body.")
+		return reqData, l, ctx, code, body, err
 	}
 
 	reqData, err = reqData.DefaultsAndValidate()
 	if err != nil {
-		code, body, _ = APIErrorResponse(ctx, http.StatusUnprocessableEntity, "Failed to validate request body.")
-		return reqData, ctx, code, body, err
+		code, body, _ = ErrorResponse(ctx, http.StatusUnprocessableEntity, "Failed to validate request body.")
+		return reqData, l, ctx, code, body, err
 	}
 
-	return reqData, ctx, http.StatusOK, nil, nil
+	return reqData, l, ctx, http.StatusOK, nil, nil
 }
 
-func APIJSON(ctx context.Context, code int, data any) (int, []byte, error) {
-	meta := APIMetadata{
+func RespondJSON(ctx context.Context, code int, data any) (int, []byte, error) {
+	meta := Metadata{
 		RequestUUID: ctx.Value(ctxkey.ReqUUID).(uuid.UUID),
 	}
-	r := APIResponse{
+	r := Response{
 		Data:     data,
 		Metadata: meta,
 	}
