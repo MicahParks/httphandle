@@ -66,10 +66,11 @@ func ErrorResponse(ctx context.Context, code int, message string) (int, []byte, 
 }
 
 func ExtractJSON[ReqData jt.Defaulter[ReqData]](r *http.Request) (reqData ReqData, l *slog.Logger, ctx context.Context, code int, body []byte, err error) {
+	ctx = r.Context()
+	l = ctx.Value(ctxkey.Logger).(*slog.Logger)
+
 	//goland:noinspection GoUnhandledErrorResult
 	defer r.Body.Close()
-
-	l = r.Context().Value(ctxkey.Logger).(*slog.Logger)
 
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
