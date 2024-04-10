@@ -6,9 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/MicahParks/httphandle/constant"
@@ -46,9 +44,6 @@ func Serve(args ServeArgs, handler http.Handler) {
 }
 
 func serverShutdown(ctx context.Context, args ServeArgs, idleConnsClosed chan struct{}, srv *http.Server) {
-	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
-
 	<-ctx.Done()
 	args.Logger.InfoContext(ctx, "Context over.",
 		constant.LogErr, ctx.Err(),
